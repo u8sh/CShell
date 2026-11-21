@@ -2,58 +2,41 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-void calculate(char *calculation, char *result) {
-    int fistNum = 0; // Erste Nummer
-    int secNum = 0; // Zweite Nummer
-    int iresult = 0; // Ergebnis als Ineger
-    char sign = -1;
-    
-    int j = 0; // Zählt, welche Ziffer gerade umgewandelt wird
-    for (int i = 0; i < strlen(calculation); i++) {
-        if (calculation[i] == '+' || calculation[i] == '-' || calculation[i] == '*' || calculation[i] == '/') {
+int calculate(const char *calculation, char *result, size_t result_size) {
+    int firstNum = 0;
+    int secondNum = 0;
+    char sign = '\0';
+
+    for (size_t i = 0; calculation[i] != '\0'; i++) {
+        if (calculation[i] == '+' || calculation[i] == '-' ||
+            calculation[i] == '*' || calculation[i] == '/') {
             sign = calculation[i];
-            j = 0;
-        } else {
-            if (sign == -1) {
-                fistNum *= 10;
-                fistNum += calculation[i]-'0';
+        } else if (calculation[i] >= '0' && calculation[i] <= '9') {
+            if (sign == '\0') {
+                firstNum = firstNum * 10 + (calculation[i] - '0');
             } else {
-                secNum *= 10;
-                secNum += calculation[i]-'0';
+                secondNum = secondNum * 10 + (calculation[i] - '0');
             }
-            j++;
+        } else {
+            return 0; // Ungültiges Zeichen
         }
     }
 
-    if (sign == '+') {
-        iresult = fistNum + secNum;
-    }
-    if (sign == '-') {
-        iresult = fistNum - secNum;
-    }
-    if (sign == '*') {
-        iresult = fistNum * secNum;
-    }
-    if (sign == '/') {
-        iresult = fistNum / secNum;
-    }
-
-    // Konvertieren der Zahl in einen String
-    int i = 0;
-    while(iresult != 0) {
-        int digit = iresult % 10;
-        result[i++] = digit + '0';
-        iresult /= 10;
+    int value;
+    switch (sign) {
+        case '+': value = firstNum + secondNum; break;
+        case '-': value = firstNum - secondNum; break;
+        case '*': value = firstNum * secondNum; break;
+        case '/':
+            if (secondNum == 0) return 0;
+            value = firstNum / secondNum;
+            break;
+        default:
+            return 0;
     }
 
-    // Umdrehen der Zahl
-    int length = strlen(result);
-    j = 0;
-    for (i = 0, j = length-1; i < j; i++, j--) {
-        char temp = result[i];
-        result[i] = result[j];
-        result[j] = temp;
-    }
+    snprintf(result, result_size, "%d", value);
+    return 1;
 }
 
 char *onInit() {
@@ -74,13 +57,12 @@ char *onTestExecution(char *cmd, char *args[], int args_count) {
 }
 
 char *onCalcExecution(char *cmd, char *args[], int args_count) {
-    if (args_count == 1) {
-        char result[10];
-        calculate(args[0], result);
-        csh_printNormal(result);
-        csh_printNormal("\n\n");
+    char result[32];
+
+    if (calculate(args[0], result, sizeof result)) {
+        csh_printNormal("%s\n\n", result);
     } else {
-        return "Not the right amount of argumets!";
+        csh_printNormal("Ungueltiger Ausdruck\n");
     }
     return NULL;
 }
